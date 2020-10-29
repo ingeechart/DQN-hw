@@ -1,23 +1,50 @@
+import os
+import cv2
+import json
+import shutil
+import logging
 import math
 import random
+from collections import namedtuple
+
+import torch
 import numpy as np
 
-# mapping tuple for saving (state,action,next_state,reward)
-def plot_durations():
-    plt.figure(2)
-    plt.clf()
-    durations_t = torch.tensor(episode_durations, dtype=torch.float)
-    plt.title('Training...')
-    plt.xlabel('Episode')
-    plt.ylabel('Duration')
-    plt.plot(durations_t.numpy())
-    # 100개의 에피소드 평균을 가져 와서 도표 그리기
-    if len(durations_t) >= 100:
-        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
+Transition = namedtuple('Transition',
+                        ('state', 'action', 'next_state', 'reward', 'terminal'))
 
-    plt.pause(0.001)  # 도표가 업데이트되도록 잠시 멈춤
-    if is_ipython:
-        display.clear_output(wait=True)
-        display.display(plt.gcf())
+
+def convert(image):
+    """
+    Convert images to 84 * 84.
+    Args:
+        image: PLE game screen.
+    """
+    image = cv2.resize(image, (84, 84))
+    _, image = cv2.threshold(image, 100, 255, cv2.THRESH_BINARY_INV)
+
+    return image
+
+
+def make_video(images, fps):
+    """
+    Make videos.
+    Args:
+        images:
+        fps:
+    """
+    import moviepy.editor as mpy
+    duration = len(images) / fps
+
+    def make_frame(t):
+        """A function `t-> frame at time t` where frame is a w*h*3 RGB array."""
+        try:
+            x = images[int(len(images) / duration * t)]
+        except:
+            x = images[-1]
+        return x.astype(np.uint8)
+
+    clip = mpy.VideoClip(make_frame, duration=duration)
+    clip.fps = fps
+
+    return clip

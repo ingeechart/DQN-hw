@@ -235,7 +235,8 @@ def optimize_model():
     for param in policy_net.parameters():
         param.grad.data.clamp_(-1, 1)
     optimizer.step()
-
+    
+    ''' start training.'''
     num_episodes = 50
         
     for i_episode in range(num_episodes):
