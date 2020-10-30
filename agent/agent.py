@@ -73,7 +73,7 @@ class Agent():
         self.targetNetwork.load_state_dict(self.qNetwork.state_dict())    
 
 
-    def getAaction(self, state):
+    def getAction(self, state):
         state = torch.from_numpy(state).float() / 255.0
         sample = random.random()
         state = state.to(self.device)

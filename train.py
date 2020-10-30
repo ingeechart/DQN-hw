@@ -52,7 +52,7 @@ def train(hParam, env, agent):
 
         while not env.game_over():
             # Select and perform an action
-            action = agent.getAaction(state)
+            action = agent.getAction(state)
             next_state, reward, done = env.step(action) # next_state, reward, done
             # print(type(state), type(action), type(next_state), type(reward), type(done))
             # state(ndarray), action(int), next_state(ndarray), reward(float), done(bool)
