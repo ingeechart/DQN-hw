@@ -57,12 +57,15 @@ class Environment():
         obs = convert(self.env.getScreenGrayscale())
         obs = np.reshape(obs, [1, 1, obs.shape[0], obs.shape[1]])
         next_state = np.append(self.state[:, 1:, ...], obs, axis=1)
-        
+
         self.t_alive += 1
         self.total_reward += reward
         self.state = next_state
 
         return self.state, reward, self.env.game_over()
+
+    def get_screen(self):
+        return self.env.getScreenRGB()
 
     def record(self):
         self.frames.append(self.env.getScreenRGB())
