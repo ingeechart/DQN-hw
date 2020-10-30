@@ -7,26 +7,41 @@ import random
 class DQN(nn.Module):
     def __init__(self, h, w, outputs):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(4, 16, kernel_size=5, stride=2)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
+        
+        linear_input_size = 64*7*7
+        self.convs = nn.Sequential(
+            nn.Conv2d(4, 32, kernel_size=8, stride=4),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU(inplace=True),
+        )
 
-        # Linear 입력의 연결 숫자는 conv2d 계층의 출력과 입력 이미지의 크기에
-        # 따라 결정되기 때문에 따로 계산을 해야합니다.
-        def conv2d_size_out(size, kernel_size = 5, stride = 2):
-            return (size - (kernel_size - 1) - 1) // stride  + 1
-        convw = conv2d_size_out(conv2d_size_out(conv2d_size_out(w)))
-        convh = conv2d_size_out(conv2d_size_out(conv2d_size_out(h)))
-        linear_input_size = convw * convh * 32
-        self.head = nn.Linear(linear_input_size, outputs)
+        self.fcs = nn.Sequential(
+            nn.Linear(linear_input_size, 512),
+            nn.ReLU(inplace=True),
+            nn.Linear(512, 2)
+        )
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+                nn.init.uniform_(m.weight, -0.01, 0.01)
+                nn.init.constant_(m.bias, 0)
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                
     # 최적화 중에 다음 행동을 결정하기 위해서 하나의 요소 또는 배치를 이용해 호촐됩니다.
     # ([[left0exp,right0exp]...]) 를 반환합니다.
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        return self.head(x.view(x.size(0), -1))
+
+        # x = F.relu(self.bn1(self.conv1(x)))
+        # x = F.relu(self.bn2(self.conv2(x)))
+        # x = F.relu(self.bn3(self.conv3(x)))
+        x = self.convs(x)
+        x = self.fcs(x.view(x.size(0), -1))
+
+        return x
 
 
 

@@ -13,8 +13,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 
-# from utils.utils import convert, make_video
-from utils import convert, make_video
+from utils.utils import convert, make_video
+# from utils import convert, make_video
 
 
 class Environment():
@@ -23,7 +23,7 @@ class Environment():
         reward_values = {
             "positive": 1,
             "tick": 0.1,
-            "loss": -1,
+            "loss": -10,
         }
         self.env = PLE(FlappyBird(),
                         display_screen=display,
@@ -39,12 +39,15 @@ class Environment():
 
     def start(self):
         self.env.act(0)
-        self.obs = convert(self.env.getScreenGrayscale())
-        self.state = np.stack([[self.obs for _ in range(4)]], axis=0)
+        obs = convert(self.env.getScreenGrayscale())
+        self.state = np.stack([[obs for _ in range(4)]], axis=0)
         self.t_alive = 0
         self.total_reward = 0
 
         return self.state
+
+    def game_over(self):
+        return self.env.game_over()
 
     def step(self, action):
         
@@ -54,7 +57,7 @@ class Environment():
         obs = convert(self.env.getScreenGrayscale())
         obs = np.reshape(obs, [1, 1, obs.shape[0], obs.shape[1]])
         next_state = np.append(self.state[:, 1:, ...], obs, axis=1)
-
+        
         self.t_alive += 1
         self.total_reward += reward
         self.state = next_state

@@ -1,11 +1,10 @@
-import gym
 import math
 import random
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib
+# import matplotlib.pyplot as plt
 from collections import namedtuple
-from itertools import count
+# from itertools import count
 from PIL import Image
 
 import torch
@@ -20,27 +19,27 @@ from agent.agent import Agent
 
 # * incase using GPU * #
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+print(device)
 episode_durations = []
 
 def convertToTensor(state, action, next_state, reward, done):
-    state = torch.from_numpy(state).float() / 255.0
-    action = torch.from_numpy(action).float()
-    next_state = torch.from_numpy(next_state).float() / 255.0
-    reward = torch.from_numpy(reward).float()
-    done = torch.from_numpy(done).float()
 
-    # state = state.cuda()
-    # action = action.cuda()
-    # state_new = state_new.cuda()
-    # terminal = terminal.cuda()
-    # reward = reward.cuda()
+    state = torch.from_numpy(state).float() / 255.0
     
+    action_onehot = np.zeros(2)
+    action_onehot[action] = 1
+    action_onehot = np.expand_dims(action_onehot, axis=0)
+    action = torch.from_numpy(action_onehot).float()
+    
+    next_state = torch.from_numpy(next_state).float() / 255.0
+    reward = torch.tensor([[reward]]).float()
+    done = torch.tensor([[done]])
+
     return state, action, next_state, reward, done
 
-def train(hyerParam, env, agent):
-    num_episodes = 50
-
+def train(hParam, env, agent):
+    num_episodes = 1000000
+    best =0
 
     for i_episode in range(num_episodes):
 
@@ -51,38 +50,43 @@ def train(hyerParam, env, agent):
         while not env.game_over():
             # Select and perform an action
             action = agent.getAaction(state)
-            next_state, reward, done = env.step(action.item()) # next_state, reward, done
-            # reward = torch.tensor([reward], device=device)
-
+            next_state, reward, done = env.step(action) # next_state, reward, done
+            # print(type(state), type(action), type(next_state), type(reward), type(done))
+            # state(ndarray), action(int), next_state(ndarray), reward(float), done(bool)
 
             # Store the transition in memory
-            state_, action_, next_state, reward_, done_ = convertToTensor(
+            state_, action_, next_state_, reward_, done_ = convertToTensor(
                                                         state, action, next_state, reward, done)
-            agent.memory.push(state_, action_, next_state, reward_, done_ )
+            # print(state_.shape, action_.shape, next_state_.shape, reward_.shape, done_.shape)
+            # torch.Size([1, 4, 84, 84]) torch.Size([1, 1]) torch.Size([1, 4, 84, 84]) torch.Size([1, 1]) torch.Size([1, 1])
+
+            agent.memory.push(state_, action_, next_state_, reward_, done_ )
+            loss = agent.updateQnet()
 
             # Move to the next state
             state = next_state
 
-            # Perform one step of the optimization (on the target network)
-            # memory에 있는 data를 통해 data를 sample 하여 qNetwork를 training 한다.
-            optimize_model()
-            if done:
-                episode_durations.append(t + 1)
-                plot_durations()
-                break
+            
         # Update the target network, copying all weights and biases in DQN
-        if i_episode % hyerParam.TARGET_UPDATE == 0:
-            target_net.load_state_dict(policy_net.state_dict())
+        if i_episode > 100:
+            if i_episode % hParam['TARGET_UPDATE'] == 0:
+                agent.updateTargetNet()
 
-        loss = agent.updateQnet()
+            if (i_episode % 10) == 1:
+                print('Episode: {} Reward: {:.3f} Loss: {:.3f}'.format(
+                    i_episode, env.total_reward, loss))
+                if env.total_reward > best:
+                    agent.save()
+                    env.total_reward = best
+        # loss = agent.updateQnet()
 
         
-if __name__=='main':
-    hyerParam = {
-        'BATCH_SIZE' = 64,
-        'GAMMA' = 0.999,
-        'TARGET_UPDATE' = 10
+if __name__=='__main__':
+    hParam = {
+        'BATCH_SIZE' : 32,
+        'GAMMA' : 0.99,
+        'TARGET_UPDATE' : 5
     }
-    env = Environment(device)
-    chulsoo = Agent(env.action_set)
-    train(hyerParam, env, chulsoo)
+    env = Environment(device, display=True)
+    chulsoo = Agent(env.action_set, hParam)
+    train(hParam, env, chulsoo)

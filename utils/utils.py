@@ -11,7 +11,7 @@ import torch
 import numpy as np
 
 Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward', 'terminal'))
+                        ('state', 'action', 'next_state', 'reward', 'done'))
 
 
 def convert(image):
