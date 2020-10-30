@@ -87,7 +87,8 @@ def train(hParam, env, agent):
                     i_episode, env.total_reward, loss))
                 if env.total_reward > best:
                     agent.save()
-                    env.total_reward = best
+                    best = env.total_reward
+                    # env.total_reward = best
         # loss = agent.updateQnet()
 
 
