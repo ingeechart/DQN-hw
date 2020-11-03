@@ -29,11 +29,15 @@ def train(hParam, env, agent):
         env.reset()
         state = env.start()
         i_episode += 1
+
+
         while not env.game_over():
             global_steps += 1
 
             # Select and perform an action
             action = agent.getAction(state)
+
+            # make an action.
             next_state, reward, done = env.step(action) # next_state, reward, done
 
             # frame = env.get_screen()
@@ -42,7 +46,7 @@ def train(hParam, env, agent):
             # frame = frame[::-1]
             # cv2.imshow('frame', frame)
 
-            # Store the transition in memory
+            # Store the state, action, next_state, reward, done in memory
             agent.memory.push(state, action, next_state, reward, done)
 
 
@@ -52,14 +56,15 @@ def train(hParam, env, agent):
 
                 # Update the target network, copying all weights and biases in DQN
                 if env.game_over():
-                    print('Episode: {} Score: {} Episode Total Reward: {:.3f} Loss: {:.3f}'.format(
-                        env.score(), i_episode, env.total_reward, loss))
+                    print('Episode: {} Score: {:.4f} Episode Total Reward: {:.4f} Loss: {:.4f}'.format(
+                       i_episode, env.score(), env.total_reward, loss))
                     if env.total_reward > best:
                         agent.save()
                         best = env.total_reward
             elif global_steps%500 == 0: 
                 print('steps {}/{}'.format(global_steps, hParam['MAX_ITER']))
 
+            # update Qnetwork
             loss = agent.updateQnet()
             # Move to the next state
             state = next_state
@@ -81,6 +86,7 @@ if __name__ == '__main__':
         'MOMENTUM': 0.9,
         'BUFFER_SIZE': 50000
     }
+
     env = Environment(device, display=True)
-    chulsoo = Agent(env.action_set, hParam)
-    train(hParam, env, chulsoo)
+    sungjun = Agent(env.action_set, hParam)
+    train(hParam, env, sungjun)
