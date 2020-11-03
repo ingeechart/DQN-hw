@@ -1,14 +1,13 @@
+import numpy as np
+import random
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.autograd import Variable
 
-from collections import namedtuple
-import random
-from agent.dqn import DQN
-import math
 from utils.utils import Transition
+from agent.dqn import DQN
 
 def convertToTensor(*args):
 
@@ -27,7 +26,7 @@ def convertToTensor(*args):
 
 class ReplayMemory:
     '''
-
+        pytorch DQN tutorial official code
     '''
     def __init__(self, capacity):
         self.capacity = capacity
@@ -35,6 +34,7 @@ class ReplayMemory:
         self.position = 0
 
     def push(self, *args):
+        args = convertToTensor(*args)
         """Saves a transition."""
         if len(self.memory) < self.capacity:
             self.memory.append(None)
@@ -63,7 +63,7 @@ class Agent():
                                         momentum=0.9)
         self.loss_func = nn.MSELoss()
                    
-        self.memory = ReplayMemory(50000)
+        self.memory = ReplayMemory(30000)
         
         self.DISCOUNT_FACTOR = 0.99  # hParam['DISCOUNT_FACTOR']
 
@@ -92,7 +92,7 @@ class Agent():
         sample = random.random()
         state = state.to(self.device)
 
-        if sample > self.eps_threshold:
+        if sample > self.eps_threshold or self.steps_done > 1000000:
             estimate = self.qNetwork(state).max(1)[1].cpu()
             del state
             
