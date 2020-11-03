@@ -76,7 +76,6 @@ class Environment():
         clip = make_video(self.frames, fps=60).rotate(-90)
         clip.write_videofile(os.path.join(
             video_path, 'env_{}.mp4'.format(episode)), fps=60)
-        # agent.restore_epsilon()
         print('Episode: {} t: {} Reward: {:.3f}'.format(
             episode, self.t_alive, self.total_reward))
 

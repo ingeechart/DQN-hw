@@ -25,11 +25,12 @@ class DQN(nn.Module):
         )
 
         for m in self.modules():
-            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-                nn.init.uniform_(m.weight, -0.01, 0.01)
-                nn.init.constant_(m.bias, 0)
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.Linear):
+                nn.init.uniform_(m.weight, -0.01, 0.01)
+                nn.init.constant_(m.bias, 0)
+
                 
     # 최적화 중에 다음 행동을 결정하기 위해서 하나의 요소 또는 배치를 이용해 호촐됩니다.
     # ([[left0exp,right0exp]...]) 를 반환합니다.

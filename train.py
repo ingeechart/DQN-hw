@@ -1,17 +1,9 @@
 import math
-import random
 import numpy as np
-# import matplotlib
-# import matplotlib.pyplot as plt
-from collections import namedtuple
-# from itertools import count
-from PIL import Image
-
 import cv2
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 
@@ -23,21 +15,6 @@ from agent.agent import Agent
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 episode_durations = []
-
-
-def convertToTensor(state, action, next_state, reward, done):
-    state = torch.from_numpy(state).float() / 255.0
-
-    action_onehot = np.zeros(2)
-    action_onehot[action] = 1
-    action_onehot = np.expand_dims(action_onehot, axis=0)
-    action = torch.from_numpy(action_onehot).float()
-
-    next_state = torch.from_numpy(next_state).float() / 255.0
-    reward = torch.tensor([[reward]]).float()
-    done = torch.tensor([[done]])
-
-    return state, action, next_state, reward, done
 
 
 def train(hParam, env, agent):
@@ -54,8 +31,6 @@ def train(hParam, env, agent):
             # Select and perform an action
             action = agent.getAction(state)
             next_state, reward, done = env.step(action) # next_state, reward, done
-            # print(type(state), type(action), type(next_state), type(reward), type(done))
-            # state(ndarray), action(int), next_state(ndarray), reward(float), done(bool)
 
             frame = env.get_screen()
             frame = np.rot90(frame, k=1)
@@ -70,33 +45,41 @@ def train(hParam, env, agent):
             # torch.Size([1, 4, 84, 84]) torch.Size([1, 1]) torch.Size([1, 4, 84, 84]) torch.Size([1, 1]) torch.Size([1, 1])
 
             agent.memory.push(state_, action_, next_state_, reward_, done_ )
-            loss = agent.updateQnet()
 
+
+            if global_steps > 50000:
+                if global_steps % hParam['TARGET_UPDATE'] == 0:
+                    agent.updateTargetNet()
+
+                # Update the target network, copying all weights and biases in DQN
+                if env.game_over():
+                    print('Episode: {} Episode Total Reward: {:.3f} Loss: {:.3f}'.format(
+                        i_episode, env.total_reward, loss))
+                    if env.total_reward > best:
+                        agent.save()
+                        best = env.total_reward
+                        
+
+            loss = agent.updateQnet()
             # Move to the next state
             state = next_state
 
         cv2.destroyAllWindows()
-
-        # Update the target network, copying all weights and biases in DQN
-        if i_episode > 100:
-            if i_episode % hParam['TARGET_UPDATE'] == 0:
-                agent.updateTargetNet()
-
-            if (i_episode % 10) == 1:
-                print('Episode: {} Reward: {:.3f} Loss: {:.3f}'.format(
-                    i_episode, env.total_reward, loss))
-                if env.total_reward > best:
-                    agent.save()
-                    best = env.total_reward
-                    # env.total_reward = best
-        # loss = agent.updateQnet()
 
 
 if __name__ == '__main__':
     hParam = {
         'BATCH_SIZE': 32,
         'GAMMA': 0.99,
-        'TARGET_UPDATE': 5
+        'TARGET_UPDATE': 5,
+        'EPS_START': 0.1,
+        'EPS_END': 0.0001,
+        'EPS_DECAY': 1e-7,
+        'MAX_ITER': 2000000,
+        'DISCOUNT_FACTOR': 0.99,
+        'LR': 1e-4,
+        'MOMENTUM': 0.9,
+        'BUFFER_SIZE': 50000
     }
     env = Environment(device, display=True)
     chulsoo = Agent(env.action_set, hParam)

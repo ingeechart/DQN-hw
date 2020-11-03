@@ -9,7 +9,21 @@ import random
 from agent.dqn import DQN
 import math
 from utils.utils import Transition
-# Transition = namedtuple('Transition',('state', 'action', 'next_state', 'reward', 'terminal'))
+
+def convertToTensor(*args):
+
+    state = torch.from_numpy(args[0]).float() / 255.0
+    
+    action_onehot = np.zeros(2)
+    action_onehot[args[1]] = 1
+    action_onehot = np.expand_dims(action_onehot, axis=0)
+    action = torch.from_numpy(action_onehot).float()
+    
+    next_state = torch.from_numpy(args[2]).float() / 255.0
+    reward = torch.tensor([[args[3]]]).float()
+    done = torch.tensor([[args[4]]])
+
+    return (state, action, next_state, reward, done)
 
 class ReplayMemory:
     '''
@@ -24,9 +38,7 @@ class ReplayMemory:
         """Saves a transition."""
         if len(self.memory) < self.capacity:
             self.memory.append(None)
-            if len(self.memory)%100 == 0:
-                print('{}/{}  ({:.5f})'.format(len(self.memory),self.capacity, len(self.memory)/self.capacity) )
-        # TODO find a way to use list as a queue
+
         self.memory[self.position] = Transition(*args)
         self.position = (self.position + 1) % self.capacity
 
@@ -53,17 +65,19 @@ class Agent():
                    
         self.memory = ReplayMemory(50000)
         
-        self.DISCOUNT_FACTOR = 0.99
+        self.DISCOUNT_FACTOR = 0.99  # hParam['DISCOUNT_FACTOR']
 
         self.steps_done = 0
-        self.EPS_START = 0.1
-        self.EPS_END = 0.0001
-        self.EPS_DECAY = 1e-7
+        self.EPS_START = 0.1  # hParam['EPS_START']
+        self.EPS_END = 0.0001  # hParam['EPS_END']
+        self.EPS_DECAY = 1e-7  # hParam['EPS_DECAY']
+        self.MAX_ITER = 2000000 # hParam['MAX_ITER']
         self.eps_threshold = self.EPS_START
         self.BATCH_SIZE = hParam['BATCH_SIZE']
 
+
         self.n_actions = len(action_set) # 2
-        # ! TODO set device
+
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.qNetwork.to(self.device)
         self.targetNetwork.to(self.device)
@@ -79,10 +93,6 @@ class Agent():
         state = state.to(self.device)
 
         if sample > self.eps_threshold:
-            # with torch.no_grad():
-            # t.max(1) will return largest column value of each row.
-            # second column on max result is index of where max element was
-            # found, so we pick action with the larger expected reward.
             estimate = self.qNetwork(state).max(1)[1].cpu()
             del state
             
@@ -113,8 +123,9 @@ class Agent():
 
         state_action_values = torch.sum(self.qNetwork(state_batch) * action_batch, dim=1)
 
-        self.optimizer.zero_grad()
         loss = self.loss_func(state_action_values, y_batch.detach())
+        
+        self.optimizer.zero_grad()
         loss.backward()
         # for param in self.qNetwork.parameters():
         #     param.grad.data.clamp_(-1, 1)
@@ -123,12 +134,14 @@ class Agent():
         return loss.data
         
     def updateEPS(self):
-        self.eps_threshold = self.EPS_END + (self.EPS_START - self.EPS_END) * \
-            math.exp(-1. * self.steps_done / self.EPS_DECAY)
         self.steps_done += 1
 
-    def save(self):
+        self.eps_threshold = self.EPS_END \
+                        + ((self.MAX_ITER - self.steps_done) \
+                            * (self.EPS_START - self.EPS_END) / self.MAX_ITER)
+
+    def save(self, path='checkpoint.pth.tar'):
         print('save')
         torch.save({
             'state_dict': self.qNetwork.state_dict(),
-        }, 'checkpoint.pth.tar')
+        }, path)
