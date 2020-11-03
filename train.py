@@ -18,33 +18,32 @@ episode_durations = []
 
 
 def train(hParam, env, agent):
-    num_episodes = 1000000
     best = 0
+    global_steps = 0
+    i_episode = 0
 
-    for i_episode in range(num_episodes):
+    print('TRAIN STARTS')
 
+    while(hParam['MAX_ITER'] > global_steps ):
         # Initialize the environment and state
         env.reset()
         state = env.start()
-
+        i_episode += 1
         while not env.game_over():
+            global_steps += 1
+
             # Select and perform an action
             action = agent.getAction(state)
             next_state, reward, done = env.step(action) # next_state, reward, done
 
-            frame = env.get_screen()
-            frame = np.rot90(frame, k=1)
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            frame = frame[::-1]
-            cv2.imshow('frame', frame)
+            # frame = env.get_screen()
+            # frame = np.rot90(frame, k=1)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            # frame = frame[::-1]
+            # cv2.imshow('frame', frame)
 
             # Store the transition in memory
-            state_, action_, next_state_, reward_, done_ = convertToTensor(
-                                                        state, action, next_state, reward, done)
-            # print(state_.shape, action_.shape, next_state_.shape, reward_.shape, done_.shape)
-            # torch.Size([1, 4, 84, 84]) torch.Size([1, 1]) torch.Size([1, 4, 84, 84]) torch.Size([1, 1]) torch.Size([1, 1])
-
-            agent.memory.push(state_, action_, next_state_, reward_, done_ )
+            agent.memory.push(state, action, next_state, reward, done)
 
 
             if global_steps > 50000:
@@ -53,12 +52,13 @@ def train(hParam, env, agent):
 
                 # Update the target network, copying all weights and biases in DQN
                 if env.game_over():
-                    print('Episode: {} Episode Total Reward: {:.3f} Loss: {:.3f}'.format(
-                        i_episode, env.total_reward, loss))
+                    print('Episode: {} Score: {} Episode Total Reward: {:.3f} Loss: {:.3f}'.format(
+                        env.score(), i_episode, env.total_reward, loss))
                     if env.total_reward > best:
                         agent.save()
                         best = env.total_reward
-                        
+            elif global_steps%500 == 0: 
+                print('steps {}/{}'.format(global_steps, hParam['MAX_ITER']))
 
             loss = agent.updateQnet()
             # Move to the next state
