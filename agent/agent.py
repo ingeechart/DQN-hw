@@ -142,7 +142,7 @@ class Agent():
         else:
             self.eps_threshold=self.EPS_END
         
-        print('eps: ',self.eps_threshold)
+        # print('eps: ',self.eps_threshold)
 
     def save(self, path='checkpoint.pth.tar'):
         print('save')
