@@ -23,7 +23,7 @@ class Environment():
         reward_values = {
             "positive": 1,
             "tick": 0.1,
-            "loss": -10,
+            "loss": -1,
         }
         self.env = PLE(FlappyBird(),
                         display_screen=display,

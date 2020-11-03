@@ -58,20 +58,19 @@ class Agent():
         self.targetNetwork = DQN(h,w,len(action_set))
         self.targetNetwork.load_state_dict(self.qNetwork.state_dict())
         
-        self.optimizer = optim.RMSprop(self.qNetwork.parameters(),
-                                        lr = 1e-4,
-                                        momentum=0.9)
+        self.optimizer = optim.Adam(self.qNetwork.parameters(),
+                                        lr = 1e-4)
         self.loss_func = nn.MSELoss()
                    
-        self.memory = ReplayMemory(30000)
+        self.memory = ReplayMemory(hParam['BUFFER_SIZE']) #
         
-        self.DISCOUNT_FACTOR = 0.99  # hParam['DISCOUNT_FACTOR']
+        self.DISCOUNT_FACTOR = hParam['DISCOUNT_FACTOR'] # 0.99 
 
         self.steps_done = 0
-        self.EPS_START = 0.1  # hParam['EPS_START']
-        self.EPS_END = 0.0001  # hParam['EPS_END']
-        self.EPS_DECAY = 1e-7  # hParam['EPS_DECAY']
-        self.MAX_ITER = 2000000 # hParam['MAX_ITER']
+        self.EPS_START = hParam['EPS_START'] # 1.0
+        self.EPS_END = hParam['EPS_END']
+        self.EPS_ITER = 1000000
+        self.MAX_ITER = hParam['MAX_ITER']
         self.eps_threshold = self.EPS_START
         self.BATCH_SIZE = hParam['BATCH_SIZE']
 
@@ -136,9 +135,14 @@ class Agent():
     def updateEPS(self):
         self.steps_done += 1
 
-        self.eps_threshold = self.EPS_END \
-                        + ((self.MAX_ITER - self.steps_done) \
-                            * (self.EPS_START - self.EPS_END) / self.MAX_ITER)
+        if self.EPS_ITER >= self.steps_done:
+            self.eps_threshold = self.EPS_END \
+                            +  ((self.EPS_START - self.EPS_END) \
+                                * (self.EPS_ITER - self.steps_done) / self.EPS_ITER)
+        else:
+            self.eps_threshold=self.EPS_END
+        
+        print('eps: ',self.eps_threshold)
 
     def save(self, path='checkpoint.pth.tar'):
         print('save')
